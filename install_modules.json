@@ -1,0 +1,7 @@
+[
+    "lodash",
+    "moment",
+    "hl7-dictionary",
+    "qewd-hl72json",
+    "fhir"
+]

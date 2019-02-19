@@ -1,0 +1,9 @@
+[
+    {
+        "uri":"/auth/login",
+        "method":"POST",
+        "handler":"auth",
+        "on_microservice":"auth",
+        "authenticate":false
+    }
+]

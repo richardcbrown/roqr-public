@@ -1,0 +1,16 @@
+{
+    "qewd_up": true,
+    "microservices": [
+      {
+        "name": "auth",
+        "host": "http://host.docker.internal",
+        "port": 8081,
+        "qewd": {
+          "serverName": "Authentication"
+        }
+      }
+    ],
+    "jwt": {
+      "secret": "50466e2e-db04-429f-ad20-a69fe61e2e75"
+    }
+  }
