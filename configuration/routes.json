@@ -1,9 +1,16 @@
 [
     {
-        "uri":"/auth/login",
+        "uri":"/api/v1/services/login",
         "method":"POST",
         "handler":"auth",
         "on_microservice":"auth",
+        "authenticate":false
+    },
+    {
+        "uri":"/api/v1/services/index",
+        "method":"POST",
+        "handler":"create",
+        "on_microservice":"index",
         "authenticate":false
     }
 ]

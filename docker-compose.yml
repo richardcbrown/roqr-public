@@ -18,3 +18,13 @@ services:
    - microservice=auth
   ports:
    - 8081:8080
+
+ index:
+  image: rtweed/qewd-server:latest
+  container_name: index
+  volumes:
+    - ~/Repos/roqr:/opt/qewd/mapped
+  environment:
+   - microservice=index
+  ports:
+   - 6000:8080

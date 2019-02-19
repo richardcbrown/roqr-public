@@ -8,6 +8,22 @@
         "qewd": {
           "serverName": "Authentication"
         }
+      },
+      {
+        "name": "repo",
+        "host": "http://host.docker.internal",
+        "port": 8081,
+        "qewd": {
+          "serverName": "repo"
+        }
+      },
+      {
+        "name": "index",
+        "host": "http://host.docker.internal",
+        "port": 6000,
+        "qewd": {
+          "serverName": "Index"
+        }
       }
     ],
     "jwt": {
