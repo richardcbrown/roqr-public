@@ -1,7 +1,20 @@
 var responders = require('./responders.js').responders;
 
+function whichApplication(url) {
+    var respondFrom = '';
+    if(url.includes('fhir'))
+    {
+        respondFrom = 'fhir';
+    } 
+    else if(url.includes('index')) 
+    {
+        respondFrom = 'index';
+    }
+    return respondFrom;
+}
+
 module.exports = function(req, res, next) {
-    var msg = res.locals.message || {error: "Internal server error"};
+    var msg = res.locals.message || {error: 'Internal server error'};
     var code, status;
     if (msg.error) {
         code = 500;
@@ -16,14 +29,15 @@ module.exports = function(req, res, next) {
             delete msg.status;
             delete msg.restMessage;
             delete msg.ewd_application;
+            delete msg.path;
         }
         res.set('Content-Length', msg.length);
         res.status(code).send(msg);
     } else {
         if(msg.token) delete msg.token;
         //Send Response...
-        console.log("WS Response: " + req.originalUrl);
-        var responseHandlers = responders['index'];
+        var respondFrom = whichApplication(req.originalUrl);
+        var responseHandlers = responders[respondFrom];
         var responseHandler = responseHandlers[req.method.toLowerCase()];
         responseHandler(msg,res);
     }

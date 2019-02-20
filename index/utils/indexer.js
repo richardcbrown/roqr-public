@@ -7,48 +7,48 @@ var indexer =
         Subscription:
         [
             {
-                property:"id",
-                indexedProperty:"_id",
-                type:"string",
-                index:"id"
+                property:'id',
+                indexedProperty:'_id',
+                type:'string',
+                index:'id'
             },
             {
-                property:"lastUpdated",
-                indexedProperty:"_lastUpdated",
-                type:"datetime",
-                index:"datetime"
+                property:'lastUpdated',
+                indexedProperty:'_lastUpdated',
+                type:'datetime',
+                index:'datetime'
             },
             {
-                property:"tag",
-                indexedProperty:"_tag",
-                type:"token",
-                index:"token"
+                property:'tag',
+                indexedProperty:'_tag',
+                type:'token',
+                index:'token'
             }, 
             {
-                property:"status",
-                type:"string",
-                index:"string"
+                property:'status',
+                type:'string',
+                index:'string'
             },
             {
-                property:"payload",
-                type:"string",
-                index:"string"
+                property:'payload',
+                type:'string',
+                index:'string'
             },
             {
-                property:"type",
-                type:"string",
-                index:"string"
+                property:'type',
+                type:'string',
+                index:'string'
             },
             {
-                property:"endpoint",
-                indexedProperty:"url",
-                type:"uri",
-                index:"uri"
+                property:'endpoint',
+                indexedProperty:'url',
+                type:'uri',
+                index:'uri'
             }
         ]
     },
     datetime: function(data) {
-        console.log("Datetime: " + JSON.stringify(data,null,2));
+        console.log('Datetime: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;
@@ -61,7 +61,7 @@ var indexer =
         return index;
     },
     name: function(data) {
-        console.log("Name: " + JSON.stringify(data,null,2));
+        console.log('Name: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;
@@ -73,13 +73,13 @@ var indexer =
             data.indexFrom.given.forEach(function(givenName) {
                 index.entries.push(
                     {
-                        "family": data.indexFrom.family
+                        'family': data.indexFrom.family
                     },        
                     {
-                        "given": givenName
+                        'given': givenName
                     },
                     {
-                        "name": givenName + " " + data.indexFrom.family
+                        'name': givenName + ' ' + data.indexFrom.family
                     }
                 )
             });
@@ -88,7 +88,7 @@ var indexer =
         return index;
     },
     number: function(data) {
-        console.log("Number: " + JSON.stringify(data,null,2));
+        console.log('Number: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;
@@ -101,7 +101,7 @@ var indexer =
         return index;
     },
     reference: function(data) {
-        console.log("Reference: " + JSON.stringify(data,null,2));
+        console.log('Reference: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;
@@ -110,16 +110,16 @@ var indexer =
         if(typeof data.indexFrom === 'object')
         {
             var reference = data.indexFrom.reference;
-            if(reference.startsWith("http")) {
+            if(reference.startsWith('http')) {
                 //URL
                 var urlEntry = {}
                 urlEntry[data.indexPropertyName] = reference;
                 index.entries.push(urlEntry);
             }
-            var referenceComponents = reference.split("/");
+            var referenceComponents = reference.split('/');
             //Type and logical Id length-2 + Logical Id = length-1;
             //Logical Id = length-1
-            var typeAndLogicalId = referenceComponents[referenceComponents.length-2] + "/" + referenceComponents[referenceComponents.length-1];
+            var typeAndLogicalId = referenceComponents[referenceComponents.length-2] + '/' + referenceComponents[referenceComponents.length-1];
             var typeAndLogicalIdEntry  = {};
             typeAndLogicalIdEntry[data.indexPropertyName] = typeAndLogicalId;
             index.entries.push(typeAndLogicalIdEntry);
@@ -133,7 +133,7 @@ var indexer =
         return index;
     },
     string: function(data) {
-        console.log("String: " + JSON.stringify(data,null,2));
+        console.log('String: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;
@@ -146,7 +146,7 @@ var indexer =
         return index;
     },
     token: function(data) {
-        console.log("Token: " + JSON.stringify(data,null,2));
+        console.log('Token: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;
@@ -156,26 +156,26 @@ var indexer =
         {
             var tokenTargetPropertyMap = 
             {
-                identifier:"value",
-                tag:"code"
+                identifier:'value',
+                tag:'code'
             }
 
             //1 index, 3 values: system|code, system|, |code
             var tagSystem, tagCode, tagSystemAndCode
             tagSystem = data.indexFrom.system;
             tagCode = data.indexFrom[tokenTargetPropertyMap[data.propertyName]];
-            tagSystemAndCode = tagSystem + "|" + tagCode;
+            tagSystemAndCode = tagSystem + '|' + tagCode;
             
             var entry = {};
             entry[data.indexPropertyName] = [
                 {
-                    "code": "|" + tagCode,
+                    'code': '|' + tagCode,
                 },
                 {
-                    "system": tagSystem + "|",
+                    'system': tagSystem + '|',
                 },
                 {
-                    "text": tagSystemAndCode
+                    'text': tagSystemAndCode
                 }  
             ]
             index.entries.push(entry); 
@@ -184,7 +184,7 @@ var indexer =
         return index;
     },
     uri: function(data) {
-        console.log("URI: " + JSON.stringify(data,null,2));
+        console.log('URI: ' + JSON.stringify(data,null,2));
 
         var index = {};
         index.name = data.index;

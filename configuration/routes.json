@@ -7,6 +7,20 @@
         "authenticate":false
     },
     {
+        "uri":"/fhir/STU3/:resource",
+        "method":"POST",
+        "handler":"create",
+        "on_microservice":"repo",
+        "authenticate":false
+    },
+    {
+        "uri":"/fhir/STU3/:resource/:id",
+        "method":"GET",
+        "handler":"read",
+        "on_microservice":"repo",
+        "authenticate":false
+    },
+    {
         "uri":"/api/v1/services/index",
         "method":"POST",
         "handler":"create",
