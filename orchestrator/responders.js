@@ -1,13 +1,13 @@
 var responders = {
     fhir: 
     {
-        get: function(msg, res)
+        get: function(msg, req, res)
             {
                 res.set('Content-Length', msg.length);
                 res.status(200)
                 res.send(msg);
             },
-        post: function(msg, res)
+        post: function(msg, req, res)
             {
                 res.status(201);
                 res.set('Content-Length', msg.length);
@@ -15,12 +15,12 @@ var responders = {
                 //Etag should be version
                 res.send(msg);
             },
-        put: function(msg, res)
+        put: function(msg, req, res)
             {
                 res.status(204);
                 res.send();
             },
-        delete: function(msg, res)
+        delete: function(msg, req, res)
             {
                 res.status(202);//Non commital (lol)
                 res.send();
@@ -28,20 +28,21 @@ var responders = {
     },
     index:
     {
-        get: function(msg, res)
+        get: function(msg, req, res)
             {
                 res.set('Content-Length', msg.length);
                 res.status(200)
                 res.send(msg);
             },
-        post: function(msg, res)
+        post: function(msg, req, res)
             {
-                res.status(201);
+                var status = req.originalUrl.endsWith('query') ? 200 : 201;
+                res.status(status);
                 res.set('Content-Length', msg.length);
-                res.set('Location','http://localhost:8080/api/v1/services/index/'+ msg.data.type+'/'+ msg.data.id)
+                res.set('Location','http://localhost:8080/api/v1/services/index/'+ msg.documentType+'/'+ msg.documentId)
                 res.send(msg);
             },
-        delete: function(msg, res)
+        delete: function(msg,  req, res)
             {
                 res.status(202);//Non commital (lol)
                 res.send();

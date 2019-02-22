@@ -39,7 +39,7 @@ module.exports = function(req, res, next) {
         var respondFrom = whichApplication(req.originalUrl);
         var responseHandlers = responders[respondFrom];
         var responseHandler = responseHandlers[req.method.toLowerCase()];
-        responseHandler(msg,res);
+        responseHandler(msg,req,res);
     }
     next();
   };

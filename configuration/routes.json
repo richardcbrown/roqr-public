@@ -26,5 +26,26 @@
         "handler":"create",
         "on_microservice":"index",
         "authenticate":false
+    },
+    {
+        "uri":"/api/v1/services/index/query",
+        "method":"POST",
+        "handler":"query",
+        "on_microservice":"index",
+        "authenticate":false
+    },
+    {
+        "uri":"/api/v1/services/index/:documentType/:documentId",
+        "method":"GET",
+        "handler":"read",
+        "on_microservice":"index",
+        "authenticate":false
+    },
+    {
+        "uri":"/api/v1/services/index/:documentType/:documentId/:global",
+        "method":"GET",
+        "handler":"read",
+        "on_microservice":"index",
+        "authenticate":false
     }
 ]

@@ -48,8 +48,8 @@ module.exports = function(args, finished) {
         var resource = args.req.body.data;
     
         var indexData = {
-            id:resource.id,
-            type:resource.resourceType,
+            documentId:resource.id,
+            documentType:resource.resourceType,
             indices:[]
         };
         //Remove any FHIR extensions from the resource as these are not searchable and therefore no point in indexing them
@@ -67,45 +67,49 @@ module.exports = function(args, finished) {
             var isIndexable = false;
     
             traverse(resource).map(function(node) {
-                if(!Array.isArray(node)) {
+                if(! Array.isArray(node)) {
                     this.path.forEach(function(path) {
                         indexTypes.forEach(function(indexType) {
                             isIndexable = (indexType.property === path);
                             if(isIndexable) {
-                                indexTypeHandler = indexer[indexType.type];
-                                index = indexTypeHandler({
-                                    resourceType: resource.resourceType,
-                                    propertyName: path,
-                                    index: indexType.index,
-                                    indexFrom: node,
-                                    indexPropertyName: indexType.indexedProperty || path
-                                });
+                                indexTypeHandler = indexer.indexers[indexType.type];
+                                index = indexTypeHandler.call(
+                                    indexer, 
+                                    {
+                                        resourceType: resource.resourceType,
+                                        propertyName: path,
+                                        global: indexType.global,
+                                        indexFrom: node,
+                                        indexPropertyName: indexType.indexedProperty || path
+                                    }
+                                );
                             }
                         });
                     });
                 }
-                //Create the indicies...
-                if(index !== undefined && index.entries !== undefined && index.entries.length > 0)
+                //Create the indices...
+                if(index !== undefined && index.subscripts !== undefined && index.subscripts.length > 0)
                 {
-                    var entries = index.entries;
-                    entries.forEach(function (entry) {
-                        traverse(entry).map(function (node) {
+                    var subscripts = index.subscripts;
+                    subscripts.forEach(function (sub) {
+                        traverse(sub).map(function (node) {
                             if (typeof node!=='object' && node !== 'index' && node !== '') {
-                                var values = [];
-                                values.push(resource.resourceType.toLowerCase());
+                                var subs = [];
+                                subs.push(resource.resourceType.toLowerCase());
                                 this.path.forEach(function(term) {
-                                    if (!isInt(term)) values.push(term);
+                                    if (!isInt(term)) subs.push(term);
                                 });
-                                values.push(node);
-                                values.push(resource.id);
-    
-                                var idx = db.use(index.name);
-                                idx.$(values).value = resource.id;
+                                subs.push(node);
+                                subs.push(resource.id);
+                                
+                                var idx = db.use(index.global);
+                                idx.$(subs).value = resource.id;
     
                                 indexData.indices.push(
                                     {
-                                        index:index.name,
-                                        values: values
+                                        global:index.global,
+                                        subscripts: subs,
+                                        value: idx.$(subs).value
                                     }
                                 );
                             }
@@ -117,10 +121,7 @@ module.exports = function(args, finished) {
             });
         }
     
-        finished({
-            breakchain:breakchain,
-            data:indexData
-        });
+        finished(indexData);
 
     } catch(ex) {
         finished({
