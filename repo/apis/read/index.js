@@ -63,7 +63,7 @@ module.exports = function(args, finished) {
                 ]
               };
               var error = {
-                error: 'Bad Request',
+                error: 'Not Found',
                 status: { code: 404 }
               }
               finished({

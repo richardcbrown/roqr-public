@@ -29,32 +29,38 @@ module.exports = function(args, finished) {
 
     try
     {
+        var results = [];
+
         var filtered;
-        var results;
+        var matches;
         var passNo = 0;
         var db = this.db;
-        //For each parameter
+        //For each parameter - create the filtered result set
         parameters.forEach(function(parameter) {
             passNo++;
-            filtered = {};
+            matches = {};
             var global = parameter.global;
             //Instantiate the correct global...
             var documents = db.use(global);
             //Apply filters using filter handler for this 'type' of global...
-             query.filters[global].call(query, documents, parameter).forEach(function(result) {
-                filtered[result] = true;
+             query.filters[global].call(query, documents, parameter).forEach(function(match) {
+                matches[match] = true;
              });
              
              if(passNo === 1) {
-                 results = filtered;
+                filtered = matches;
              } else {
-                 for(id in results) {
-                     if(!filtered[id]) delete results[id];
+                 for(result in filtered) {
+                     if(!matches[result]) delete filtered[result];
                  }
              }
         });
 
-        finished(results);
+        for(result in filtered) {
+            results.push(result);
+        }
+
+        finished(result);
 
     } catch(ex) {
         finished({

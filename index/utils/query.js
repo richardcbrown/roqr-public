@@ -25,22 +25,26 @@ var query =
             var selector = this.selectors['string'].call(this,parameter)
                 .paths[0]
                 .split(',');
-            //Fetch the initial result set...
+            //Fetch the initial result set (map)...
             documents.$(selector).forEachChild(function(value,node) {
-                //Any modifiers?
-                var match = false;
-                var modifier = parameter.modififer || ''
-                if(modifier !== '') {
-                    match = this.modifiers[modifier].call(this,value,parameter.value);
-                } else {
-                    //= means starts with http://hl7.org/fhir/stu3/search.html#string
-                    match = value.toLowerCase().startsWith(parameter.value.toLowerCase());
-                }
-                if(match === true) {
-                    node.forEachChild(function(id) {
-                        results.push(id);
-                    });
-                }
+                //Filter (reduce)...
+                var paramValues = parameter.value.split(','); //Handles 'OR' (which kinda translates to a SQL IN)
+                paramValues.forEach(function(paramValue) {
+                    //Any modifiers?
+                    var match = false;
+                    var modifier = parameter.modififer || '';
+                    if(modifier !== '') {
+                        match = this.modifiers[modifier].call(this,value,paramValue);
+                    } else {
+                        //= means starts with http://hl7.org/fhir/stu3/search.html#string
+                        match = value.toLowerCase().startsWith(paramValue.toLowerCase());
+                    }
+                    if(match === true) {
+                        node.forEachChild(function(id) {
+                            results.push(id);
+                        });
+                    }
+                });
             });
             return results;
         },
