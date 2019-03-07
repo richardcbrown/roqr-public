@@ -1,4 +1,5 @@
 var traverse = require('traverse');
+var registry = require('../../utils/registry.js');
 var indexer = require('../../utils/indexer.js').indexer;
 
 function isEmptyObject(obj) {
@@ -11,6 +12,8 @@ function isEmptyObject(obj) {
 function isInt(value) {
     return !isNaN(value) && parseInt(Number(value)) == value && !isNaN(parseInt(value, 10));
 }  
+
+var indexed = [];
 
 module.exports = function(args, finished) {
 
@@ -59,21 +62,31 @@ module.exports = function(args, finished) {
         
         var db = this.db;
         
-        var indexTypes = indexer.registry[resource.resourceType];
+        var indexTypes = registry.resources[resource.resourceType];
         if(indexTypes !== undefined && indexTypes.length > 0) {
             
-            var index;
+            var indices;
             var indexTypeHandler;
             var isIndexable = false;
     
             traverse(resource).map(function(node) {
-                if(! Array.isArray(node)) {
+                if(!Array.isArray(node)) {
                     this.path.forEach(function(path) {
                         indexTypes.forEach(function(indexType) {
-                            isIndexable = (indexType.property === path);
+                            ///If false then any other property after this one with the same name will not be indexed
+                            //This is intended to prevent encounter.type and encounter.participant.type from both being indexed as encounter.type, for example...
+                            var allowMultiple = (typeof indexType.allowMultiple === 'undefined' ? true : indexType.allowMultiple);
+                            if(allowMultiple === false) {
+                                //Check if this indexType.property hasn't already been indexed... if not, isIndexable === true
+                                isIndexable = (indexType.property === path && indexed.indexOf(indexType.property) === -1);
+                            } 
+                            else {
+                                isIndexable = (indexType.property === path);
+                            }
+
                             if(isIndexable) {
                                 indexTypeHandler = indexer.indexers[indexType.type];
-                                index = indexTypeHandler.call(
+                                indices = indexTypeHandler.call(
                                     indexer, 
                                     {
                                         resourceType: resource.resourceType,
@@ -83,44 +96,56 @@ module.exports = function(args, finished) {
                                         indexPropertyName: indexType.indexedProperty || path
                                     }
                                 );
+                                
+                                //If allowMultiple === false and we have got this far then add indexType.property to the indexed array to prevent any more properties of the same name from being indexed...
+                                if(allowMultiple === false) {
+                                    indexed.push(indexType.property);
+                                }
                             }
                         });
                     });
                 }
                 //Create the indices...
-                if(index !== undefined && index.subscripts !== undefined && index.subscripts.length > 0)
+                if(indices !== undefined && indices.length > 0)
                 {
-                    var subscripts = index.subscripts;
-                    subscripts.forEach(function (sub) {
-                        traverse(sub).map(function (node) {
-                            if (typeof node!=='object' && node !== 'index' && node !== '') {
-                                var subs = [];
-                                subs.push(resource.resourceType.toLowerCase());
-                                this.path.forEach(function(term) {
-                                    if (!isInt(term)) subs.push(term);
-                                });
-                                subs.push(node);
-                                subs.push(resource.id);
-                                
-                                var idx = db.use(index.global);
-                                idx.$(subs).value = resource.id;
-    
-                                indexData.indices.push(
-                                    {
-                                        global:index.global,
-                                        subscripts: subs,
-                                        value: idx.$(subs).value
+                    indices.forEach(function(index) {
+                        if(index !== undefined && index.subscripts !== undefined && index.subscripts.length > 0)
+                        {
+                            var subscripts = index.subscripts;
+                            subscripts.forEach(function (sub) {
+                                traverse(sub).map(function (node) {
+                                    if (typeof node!=='object' && node !== 'index' && node !== '') {
+        
+                                        var subs = [];
+                                        subs.push(resource.resourceType.toLowerCase());
+                                        this.path.forEach(function(term) {
+                                            if (!isInt(term)) subs.push(term);
+                                        });
+                                        subs.push(node);
+                                        subs.push(resource.id);
+                                        
+                                        var idx = db.use(index.global);
+                                        idx.$(subs).value = resource.id;
+            
+                                        indexData.indices.push(
+                                            {
+                                                global:index.global,
+                                                subscripts: subs,
+                                                value: idx.$(subs).value
+                                            }
+                                        );
                                     }
-                                );
-                            }
-                        });
+                                });
+                            });
+                        }
                     });
-                    index = undefined;
+
+                    indices = undefined;
                     indexTypeHandler = undefined;
                 }
             });
         }
-    
+        
         finished(indexData);
 
     } catch(ex) {

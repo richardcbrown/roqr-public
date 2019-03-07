@@ -2,121 +2,6 @@ var moment = require('moment');
 
 var indexer = 
 {
-    registry: 
-    {
-        Subscription:
-        [
-            {
-                property:'id',
-                indexedProperty:'_id',
-                type:'string',
-                global:'id'
-            },
-            {
-                property:'lastUpdated',
-                indexedProperty:'_lastUpdated',
-                type:'datetime',
-                global:'datetime'
-            },
-            {
-                property:'tag',
-                indexedProperty:'_tag',
-                type:'token',
-                global:'token'
-            }, 
-            {
-                property:'status',
-                type:'string',
-                global:'string'
-            },
-            {
-                property:'payload',
-                type:'string',
-                global:'string'
-            },
-            {
-                property:'type',
-                type:'string',
-                global:'string'
-            },
-            {
-                property:'endpoint',
-                indexedProperty:'url',
-                type:'uri',
-                global:'uri'
-            }
-        ],
-        Patient:
-        [
-            {
-                property:"id",
-                indexedProperty:"_id",
-                type:"string",
-                global:"id"
-            },
-            {
-                property:"lastUpdated",
-                indexedProperty:"_lastUpdated",
-                type:"datetime",
-                global:"datetime"
-            },
-            {
-                property:"city",
-                indexedProperty:"address-city",
-                type:"string",
-                global:"string"
-            },
-            {
-                property:"district",
-                indexedProperty:"address-state",
-                type:"string",
-                global:"string"
-            },
-            {
-                property:"postalCode",
-                indexedProperty:"address-postalcode",
-                type:"string",
-                global:"string"
-            },
-            {
-                property:"name",
-                type:"name",
-                global:"name"
-            },        
-            {
-                property:"identifier",
-                indexedProperty:"identifier",
-                type:"token",
-                global:"token"
-            },
-            {
-                property:"tag",
-                indexedProperty:"_tag",
-                type:"token",
-                global:"token"
-            },
-            {
-                property:"gender",
-                type:"string",
-                global:"string"
-            },
-            {
-                property:"birthDate",
-                type:"datetime",
-                global:"datetime"
-            },
-            {
-                property:"managingOrganization",
-                type:"reference",
-                global:"reference"
-            },
-            {
-                property:"generalPractitioner",
-                type:"reference",
-                global:"reference"
-            }
-        ]
-    },
     indexers:
     {
         _baseIndexer: function(data) {
@@ -128,13 +13,31 @@ var indexer =
             entry[data.indexPropertyName] = data.indexFrom;
             index.subscripts.push(entry);
     
-            return index;
+            return [index];
         },
         datetime: function(data) {
             console.log('Datetime Indexer: ' + JSON.stringify(data,null,2));
-            var index = this.indexers._baseIndexer(data);
-            index.subscripts[0][data.indexPropertyName] =  moment(index.subscripts[0][data.indexPropertyName]).valueOf();
-            return index;
+            //Create two entries: 1) one just the date portion of the string and 2) a datetime (using 00:00:00 if not present)
+            var index = {};
+            index.global = data.global;
+            index.subscripts = [];
+
+            var dateValue = data.indexFrom;
+            var dateString = dateValue.includes('T') ? dateValue.substring(0,dateValue.indexOf('T')) : dateValue;
+            var dateTimeString = dateValue.includes('T') ? dateValue : dateValue + 'T00:00:00';
+
+            var dateEntry = {};
+            dateEntry[data.indexPropertyName + 'Date'] = moment(dateString).valueOf();
+
+            var dateTimeEntry = {};
+            dateTimeEntry[data.indexPropertyName + 'DateTime'] = moment(dateTimeString).valueOf();
+
+            index.subscripts.push(
+                dateEntry,
+                dateTimeEntry
+            )
+
+            return [index];
         },
         name: function(data) {
             console.log('Name Indexer: ' + JSON.stringify(data,null,2));
@@ -160,8 +63,50 @@ var indexer =
                     )
                 });
             }
+
+            return [index];
+        },
+        period: function(data) {
+            console.log('Period Indexer: ' + JSON.stringify(data,null,2));
+    
+            var index = {};
+            index.global = data.global;
+            index.subscripts = [];
+            //Only do this if indexFrom is a period object...
+            if(typeof data.indexFrom === 'object')
+            {
+                var dateStartValue = data.indexFrom.start;
+                var dateStartString = dateStartValue.includes('T') ? dateStartValue.substring(0,dateStartValue.indexOf('T')) : dateStartValue;
+                var dateStartTimeString = dateStartValue.includes('T') ? dateStartValue : dateStartValue + 'T00:00:00';
+
+                var dateStartEntry = {};
+                dateStartEntry['startDate'] = moment(dateStartString).valueOf();
+                var dateStartTimeEntry = {};
+                dateStartTimeEntry['startDateTime'] = moment(dateStartTimeString).valueOf();
+
+                var entry = {};
+                entry[data.indexPropertyName] = [
+                    dateStartEntry,
+                    dateStartTimeEntry
+                ]
+
+                //Default to end date of 31/12/9999 if no end date is provided
+                var dateEndValue = data.indexFrom.end || "9999-12-31T23:59:59";
+                var dateEndString = dateEndValue.includes('T') ? dateEndValue.substring(0,dateEndValue.indexOf('T')) : dateEndValue;
+                var dateEndTimeString = dateEndValue.includes('T') ? dateEndValue : dateEndValue + 'T23:59:59';
+
+                var dateEndEntry = {};
+                dateEndEntry['endDate'] = moment(dateEndString).valueOf();
+                var dateEndTimeEntry = {};
+                dateEndTimeEntry['endDateTime'] = moment(dateEndTimeString).valueOf();
+
+                entry[data.indexPropertyName].push(dateEndEntry);
+                entry[data.indexPropertyName].push(dateEndTimeEntry);
+               
+                index.subscripts.push(entry);
+            }
         
-            return index;
+            return [index];
         },
         number: function(data) {
             console.log('Number Indexer: ' + JSON.stringify(data,null,2));
@@ -174,7 +119,7 @@ var indexer =
             index.global = data.global;
             index.subscripts = [];
             //Only do this if data.indexFrom is a reference object...
-            if(typeof data.indexFrom === 'object')
+            if(typeof data.indexFrom === 'object' && data.indexFrom.reference)
             {
                 var reference = data.indexFrom.reference;
                 if(reference.startsWith('http')) {
@@ -195,9 +140,12 @@ var indexer =
                 var logicalIdEntry = {};
                 logicalIdEntry[data.indexPropertyName] = logicalId;
                 index.subscripts.push(logicalIdEntry);
+
+                //Need to add an identifier if exists in indexFrom...
+                //if(reference.identifier) { index.subscripts.push(system + | + code)};
             }
     
-            return index;
+            return [index];
         },
         string: function(data) {
             console.log('String Indexer: ' + JSON.stringify(data,null,2));
@@ -212,33 +160,144 @@ var indexer =
     
             if(typeof data.indexFrom === 'object')
             {
-                //1 index, 3 values: system|code, system|, |code
-                var tagSystem, tagCode, tagSystemAndCode
-                tagSystem = data.indexFrom.system;
-                tagCode = data.indexFrom[this._tokenTargetPropertyMap[data.propertyName]];
-                tagSystemAndCode = tagSystem + '|' + tagCode;
-                
-                var tokenValue = {};
-                var tokenValuePropertyName = this._tokenTargetPropertyMap[data.propertyName];
-                tokenValue[tokenValuePropertyName] = '|' + tagCode;
-                var systemValue = {'system': tagSystem + '|'};
-                var textValue = {'text': tagSystemAndCode};
+                var tokenData = {
+                    propertyName: data.propertyName,
+                    indexPropertyName: data.indexPropertyName,
+                    system: data.indexFrom.system || ''
+                };
 
-                var entry = {};
-                entry[data.indexPropertyName] = [
-                    tokenValue,
-                    systemValue,
-                    textValue
-                ]
+                tokenData[this._tokenTargetPropertyMap[data.propertyName]] = data.indexFrom[this._tokenTargetPropertyMap[data.propertyName]];
 
-                index.subscripts.push(entry); 
+                var entry = this.indexers._tokenizer.call(this, tokenData);
+                index.subscripts.push(entry);
             }
     
-            return index;
+            return [index];
+        },
+        codeableConcept: function(data) {
+            console.log('Codeable Concepts Indexer: ' + JSON.stringify(data,null,2));
+    
+            var index = {};
+            index.global = data.global;
+            index.subscripts = [];
+    
+            if(typeof data.indexFrom === 'object')
+            {
+                var entry = {};
+                var tokenSystem, tokenCode, tokenSystemAndCode, tokenValue, systemValue, textValue
+                //Needs to check for presence of coding array (codeable concept)
+                if(data.indexFrom.coding && data.indexFrom.coding.length > 0)
+                {
+                    var context = this;
+                    data.indexFrom.coding.forEach(function(codeableConcept) {
+
+                        var tokenData = {
+                            propertyName: data.propertyName,
+                            indexPropertyName: data.indexPropertyName,
+                            code:codeableConcept.code,
+                            system:codeableConcept.system
+                        };
+
+                        var entry = context.indexers._tokenizer.call(context, tokenData);
+                        index.subscripts.push(entry); 
+                    })
+                } 
+            }
+    
+            return [index];
+        },
+        participant: function(data) {
+            console.log('Participant Indexer: ' + JSON.stringify(data,null,2));
+            //Participant has to be split across two indices: a codeable concept (participant-type) and a reference (participant).
+            var indexes = [];
+            //This check will ensure that the indexing is only done once
+            if(data.indexFrom.type) {
+                //Tokenize the codeable concept first...
+                if(data.indexFrom.type.length > 0)
+                {
+                    var context = this;
+
+                    data.indexFrom.type.forEach(function(type) {
+                        
+                        var index = {};
+                        index.subscripts = [];
+                        index.global = data.global[0]; //Token
+            
+                        type.coding.forEach(function(codeableConcept) {
+    
+                            var tokenData = {
+                                propertyName: "type",
+                                indexPropertyName: data.indexPropertyName[0], //participant-type
+                                code:codeableConcept.code,
+                                system:codeableConcept.system
+                            };
+    
+                            var entry = context.indexers._tokenizer.call(context, tokenData);
+                            index.subscripts.push(entry); 
+                        })
+
+                        indexes.push(index);
+                        
+                    });
+                }
+                //Now the individual...
+                if(data.indexFrom.individual) 
+                {
+                    var referenceData = {
+                        resourceType: data.resourceType,
+                        propertyName: "individual",
+                        global: data.global[1],//reference
+                        indexFrom: data.indexFrom.individual,
+                        indexPropertyName: data.indexPropertyName[1] //participant
+                    }
+                    //Palm this off to reference handler...
+                    var reference = this.indexers.reference.call(this, referenceData);
+                    indexes.push(reference[0]);
+                }
+
+            }
+            return indexes 
         },
         uri: function(data) {
             console.log('URI Indexer: ' + JSON.stringify(data,null,2));
             return this.indexers._baseIndexer(data);
+        },
+        _tokenizer: function(data) {
+            //data == data.indexPropertyName, data.propertyName, data.system, data.code/value
+            //If no system, then 2 entries |code, code (means code without a system or where system is implicit, e.g. gender)
+            //If system, then 3 entries system|code, system|, code
+            var tokenSystem = data.system;
+            var tokenCode = data[this._tokenTargetPropertyMap[data.propertyName]]; 
+            
+            var tokenValue = {};
+            var tokenValueName = this._tokenTargetPropertyMap[data.propertyName];
+            tokenValue[tokenValueName] = tokenCode;
+
+            var entry = {}, systemlessTokenValue = {}, systemValue = {}, textValue = {};
+
+            if(tokenSystem === '')
+            {
+                systemlessTokenValue[this._tokenTargetPropertyMap[data.propertyName]] = '|' + tokenCode;
+                systemValue.system = '|';
+                entry[data.indexPropertyName] = [
+                    tokenValue,
+                    systemValue,
+                    systemlessTokenValue
+                ];
+            } 
+            else 
+            {
+                systemValue.system = tokenSystem + '|';
+                textValue.text = tokenSystem + '|' + tokenCode;
+
+                entry[data.indexPropertyName] = [
+                    tokenValue,
+                    systemValue,
+                    textValue
+                ];
+            }
+
+            return entry;
         }
     },
     resolvers:{
@@ -255,7 +314,34 @@ var indexer =
         },
         datetime: function(data) {
             console.log('Datetime Resolver: ' + JSON.stringify(data,null,2));
-            return this.resolvers._baseResolver(data);
+            //Base resolver will give us datetime node - need to append date and dateTime...
+            var path = this.resolvers._baseResolver(data);
+            var basePath = path.paths[0];
+            path.paths[0] = basePath + 'Date';
+            path.paths[1] = basePath + 'DateTime';
+            return path;
+        },
+        period: function(data) {
+            console.log('Period Resolver: ' + JSON.stringify(data,null,2));
+            //Start, End
+            var basePath = data.documentType.toLowerCase() + ',' + data.indexedProperty;//e.g. encounter,date
+            //First path is start date...
+            var startDate = basePath + ',startDate';
+            //Second is start datetime
+            var startDateTime = basePath + ',startDateTime';
+            //Third path is end date...
+            var endDate = basePath + ',endDate';
+            //Fourth path is end datetime...
+            var endDateTime = basePath + ',endDateTime';
+            //Push each path into paths array
+            var path = {}
+            path.paths = [];
+            path.paths.push(startDate);
+            path.paths.push(startDateTime);
+            path.paths.push(endDate);
+            path.paths.push(endDateTime)
+            //return path;
+            return path;
         },
         name: function(data) {
             console.log('Name Resolver: ' + JSON.stringify(data,null,2));
@@ -308,7 +394,10 @@ var indexer =
     {
         identifier:'value',
         tag:'code',
-        _tag:'code'
+        _tag:'code',
+        type:'code',
+        class:'code',
+        "participant-type":'code'
     }
 }
 

@@ -26,6 +26,7 @@ module.exports = function(req, res, next) {
         } 
         else 
         {
+
             delete msg.status;
             delete msg.restMessage;
             delete msg.ewd_application;

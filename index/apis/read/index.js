@@ -18,10 +18,42 @@ module.exports = function(args, finished) {
 
         var db = this.db;
         indexTypes.forEach(function(indexType) {
-            if(global === '' || (global !== '' && indexType.global === global)) 
+            
+            var globals = [];
+            if(Array.isArray(indexType.global)) {
+                indexType.global.forEach(function(gl) {
+                    if(global !== '') {
+                        if(global === gl) globals.push(gl);
+                    } else {
+                        globals.push(gl);
+                    }
+                });
+            } else {
+                globals.push(indexType.global);
+            }
+
+            if(global === '' || (global !== '' && globals.indexOf(global) > -1)) 
             {
-                var indexedProperty = indexType.indexedProperty || indexType.property;
-                var path = indexer.resolvers[indexType.global].call(
+                globals.forEach(function(global) 
+                {
+                    var indexedProperties = [];
+                    if(Array.isArray(indexType.indexedProperty))
+                    {
+                        //Needs filtering - the property that is pushed to the array should match the global 
+                        indexType.indexedProperty.forEach(function(indexedProperty) {
+                            if(indexType.indexPropertyGlobals[indexedProperty] === global)
+                            {
+                                indexedProperties.push(indexedProperty);
+                            }
+                        });
+                    } else {
+                        var indexedProperty = indexType.indexedProperty || indexType.property;
+                        indexedProperties.push(indexedProperty);
+                    }
+                    
+                    var path;
+                    indexedProperties.forEach(function(indexedProperty) {
+                        path = indexer.resolvers[global].call(
                             indexer, 
                             {
                                 documentType: indexData.documentType,
@@ -29,37 +61,34 @@ module.exports = function(args, finished) {
                                 indexedProperty: indexedProperty
                             }
                         );
-
-                var documents = db.use(indexType.global);
-                path.paths.forEach(function(path) {
-                    
-                    var pathArray = path.split(',');
-                    documents.$(pathArray).forEachChild(function(value, node) {
-                        
-                        var global =  node._node.global;
-                        var subscripts = node._node.subscripts;
-
-                        node.forEachChild(function(id) {
-                            if(id===indexData.documentId)
-                            {
-                                subscripts.push(id);
-                                indexData.indices.push(
-                                    {
-                                        global: global,
-                                        subscripts: subscripts,
-                                        value: documents.$(subscripts).value
-                                    }
-                                )
-                                return true;
-                            }
-
-                        if(indexData.indices.length > 0) {
-                            return true;
-                        }
-
-                        });
                     });
-                }); 
+
+                    var documents = db.use(global);
+                    path.paths.forEach(function(path) {
+                        console.log("Path: " + path);
+                        var pathArray = path.split(',');
+                        documents.$(pathArray).forEachChild(function(value, node) {
+                            
+                            var global =  node._node.global;
+                            var subscripts = node._node.subscripts;
+
+                            node.forEachChild(function(id) {
+                                if(id===indexData.documentId)
+                                {
+                                    subscripts.push(id);
+                                    indexData.indices.push(
+                                        {
+                                            global: global,
+                                            subscripts: subscripts,
+                                            value: documents.$(subscripts).value
+                                        }
+                                    )
+                                    return true;
+                                }
+                            });
+                        });
+                    }); 
+                });
             }
         });
 

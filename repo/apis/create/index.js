@@ -95,9 +95,12 @@ module.exports = function(args, finished) {
           resource.meta.versionId = '1';
           resource.meta.lastUpdated = moment().utc().format();
         }
+        //Create source _tag
+        
 
         var doc = this.db.use(resource.resourceType);
         doc.$(resource.id).setDocument(resource);
+
         finished(resource);
     } catch (ex) {
         finished({

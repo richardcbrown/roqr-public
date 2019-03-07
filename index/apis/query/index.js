@@ -23,10 +23,6 @@ module.exports = function(args, finished) {
         );
     }
 
-    //Validate global in each param
-    //Validate documentType in each param
-    //Validate node in each valid param (indexer registry - candidate for moving into own object?)
-
     try
     {
         var results = [];
@@ -34,6 +30,7 @@ module.exports = function(args, finished) {
         var filtered;
         var matches;
         var passNo = 0;
+
         var db = this.db;
         //For each parameter - create the filtered result set
         parameters.forEach(function(parameter) {
@@ -60,7 +57,7 @@ module.exports = function(args, finished) {
             results.push(result);
         }
 
-        finished(result);
+        finished(results);
 
     } catch(ex) {
         finished({

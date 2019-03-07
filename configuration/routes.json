@@ -21,18 +21,39 @@
         "authenticate":false
     },
     {
+        "uri":"/fhir/STU3/:resource",
+        "method":"GET",
+        "handler":"search",
+        "on_microservice":"search",
+        "authenticate":false
+    },
+    {
+        "uri":"/fhir/STU3/",
+        "method":"POST",
+        "handler":"batch",
+        "on_microservice":"repo",
+        "authenticate":false
+    },
+    {
         "uri":"/api/v1/services/index",
         "method":"POST",
         "handler":"create",
         "on_microservice":"index",
-        "authenticate":false
+        "authenticate":false,
+        "from_microservices":[
+            "repo"
+        ]
     },
     {
         "uri":"/api/v1/services/index/query",
         "method":"POST",
         "handler":"query",
         "on_microservice":"index",
-        "authenticate":false
+        "authenticate":false,
+        "from_microservices":
+        [
+            "search"
+        ]
     },
     {
         "uri":"/api/v1/services/index/:documentType/:documentId",
